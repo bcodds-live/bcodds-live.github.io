@@ -3,16 +3,17 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="description" content="Live Polymarket odds for BC mayor, provincial and party races.">
+<meta name="description" content="Live Polymarket odds for BC provincial and city mayor races.">
 <title>BC Odds Board</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap">
 <style>
-/* Layout: election-night board. Race list on the left (stacks on phone), selected race on the right with one bar per candidate. */
+/* Layout: one calm column. Provincial (party, then Premier) on top, city mayors below, extras folded away.
+   Tapping a race slides its full chart in as a panel: from the right on desktop, full screen on phone. */
 :root{
   --bg:#f3f5f4; --surface:#ffffff; --ink:#142320; --muted:#5d6b68; --line:#d9e0de;
   --accent:#1d5c74; --accent-soft:#dbe9ef; --lead:#b4462b; --track:#e7ecea;
-  --live:#2e9b5f; --chip:#fbe7d6; --chip-ink:#8a3a1c;
+  --live:#2e9b5f; --chip:#fbe7d6; --chip-ink:#8a3a1c; --scrim:rgba(20,35,32,.35);
   --display:"Barlow Condensed","Arial Narrow",sans-serif;
   --body:"IBM Plex Sans",system-ui,-apple-system,sans-serif;
   --mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
@@ -20,48 +21,68 @@
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
   --bg:#0f1716; --surface:#16211f; --ink:#e6eeec; --muted:#93a39f; --line:#26332f;
   --accent:#6fb3cc; --accent-soft:#1c3640; --lead:#e8805f; --track:#22302d;
-  --live:#5fcf8f; --chip:#3a2419; --chip-ink:#f1a684; color-scheme:dark}}
+  --live:#5fcf8f; --chip:#3a2419; --chip-ink:#f1a684; --scrim:rgba(0,0,0,.55); color-scheme:dark}}
 :root[data-theme="dark"]{
   --bg:#0f1716; --surface:#16211f; --ink:#e6eeec; --muted:#93a39f; --line:#26332f;
   --accent:#6fb3cc; --accent-soft:#1c3640; --lead:#e8805f; --track:#22302d;
-  --live:#5fcf8f; --chip:#3a2419; --chip-ink:#f1a684; color-scheme:dark}
+  --live:#5fcf8f; --chip:#3a2419; --chip-ink:#f1a684; --scrim:rgba(0,0,0,.55); color-scheme:dark}
 
 *{box-sizing:border-box}
-body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.45;padding-inline:16px;padding-block:20px 40px}
-.wrap{max-width:1040px;margin:0 auto;display:grid;gap:20px}
-header{display:grid;gap:6px;border-bottom:2px solid var(--ink);padding-bottom:12px}
-.top{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:8px 16px}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.45;padding-inline:16px;padding-block:20px 48px}
+body.locked{overflow:hidden}
+.wrap{max-width:760px;margin:0 auto;display:grid;gap:28px}
+header{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:8px 16px;border-bottom:2px solid var(--ink);padding-bottom:12px}
 h1{font-family:var(--display);font-weight:700;font-size:2.4rem;line-height:1;letter-spacing:.01em;margin:0;text-transform:uppercase}
 h1 span{color:var(--accent)}
-.lede{margin:0;color:var(--muted);font-size:.9rem}
-.status{font-size:.8rem;color:var(--muted);display:flex;align-items:center;gap:8px;font-family:var(--mono)}
+.status{font-size:.78rem;color:var(--muted);display:flex;align-items:center;gap:8px;font-family:var(--mono)}
 .dot{width:8px;height:8px;border-radius:50%;background:var(--muted);flex:none}
 .dot.live{background:var(--live)}
-.main{display:grid;grid-template-columns:minmax(0,320px) minmax(0,1fr);gap:20px;align-items:start}
-@media (max-width:760px){.main{grid-template-columns:minmax(0,1fr)}}
 
-.side{display:grid;gap:12px;min-width:0}
-#q{width:100%;font:inherit;padding:10px 12px;border:1px solid var(--line);border-radius:6px;background:var(--surface);color:var(--ink)}
-#q:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
-.group{display:grid;gap:2px}
-.group h2{display:flex;flex-wrap:wrap;justify-content:space-between;gap:2px 8px;font-family:var(--display);font-weight:600;font-size:.95rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:10px 0 4px}
-.group h2 small{font-family:var(--mono);font-size:.72rem;letter-spacing:0;text-transform:none;font-weight:500}
-.mkt{all:unset;box-sizing:border-box;cursor:pointer;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 10px;padding:9px 10px;border-radius:6px;border-left:3px solid transparent}
-.mkt:hover{background:var(--surface)}
-.mkt:focus-visible{outline:2px solid var(--accent)}
-.mkt[aria-current="true"]{background:var(--accent-soft);border-left-color:var(--accent)}
-.mkt .t{font-weight:500;min-width:0;grid-column:1;grid-row:1}
-.mkt .lead{font-size:.8rem;color:var(--muted);grid-column:1;grid-row:2;min-width:0}
-.mkt .pct{font-family:var(--mono);font-size:.85rem;font-variant-numeric:tabular-nums;color:var(--ink);grid-column:2;grid-row:1 / span 2;align-self:center}
-.chip{display:inline-block;font-size:.68rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;padding:1px 6px;border-radius:3px;background:var(--chip);color:var(--chip-ink);margin-left:6px;vertical-align:1px}
-.empty{color:var(--muted);font-size:.9rem;padding:8px 10px}
+section{display:grid;gap:12px}
+section h2{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:2px 12px;margin:0;font-family:var(--display);font-weight:700;font-size:1.35rem;letter-spacing:.06em;text-transform:uppercase}
+section h2 small{font-family:var(--mono);font-size:.75rem;font-weight:500;letter-spacing:0;text-transform:none;color:var(--muted)}
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,300px),1fr));gap:10px}
 
-.detail{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:20px;min-width:0;display:grid;gap:16px;scroll-margin-top:12px}
-.back{all:unset;cursor:pointer;color:var(--accent);font-size:.85rem;font-weight:600;display:none}
-.back:focus-visible{outline:2px solid var(--accent)}
-@media (max-width:760px){.back{display:inline}}
+/* One race card: question, leader, a head-to-head bar, runner-up. */
+.card{all:unset;box-sizing:border-box;cursor:pointer;display:grid;gap:6px;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:14px 16px;transition:border-color .15s,transform .15s}
+.card:hover{border-color:var(--accent)}
+.card:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.card:active{transform:scale(.99)}
+.q{font-size:.75rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:600;display:flex;justify-content:space-between;gap:8px}
+.q::after{content:"›";font-size:1.1rem;line-height:.8;color:var(--accent)}
+.who{display:flex;justify-content:space-between;align-items:baseline;gap:12px}
+.who b{font-weight:600;font-size:1.1rem;min-width:0}
+.big{font-family:var(--mono);font-size:1.3rem;color:var(--lead);font-variant-numeric:tabular-nums}
+.card.lg .who b{font-family:var(--display);font-size:1.6rem;font-weight:700;line-height:1.05}
+.card.lg .big{font-size:1.6rem}
+.duel{display:flex;height:8px;border-radius:2px;overflow:hidden;background:var(--track)}
+.duel i{display:block;height:100%}
+.duel .a{background:var(--lead)}
+.duel .b{background:var(--accent)}
+.vs{font-size:.85rem;color:var(--muted);display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+.chip{display:inline-block;font-size:.68rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;padding:1px 6px;border-radius:3px;background:var(--chip);color:var(--chip-ink)}
+
+details{border-top:1px solid var(--line);padding-top:12px}
+summary{cursor:pointer;color:var(--accent);font-weight:600;font-size:.9rem}
+summary:focus-visible{outline:2px solid var(--accent)}
+.more-list{display:grid;gap:2px;margin-top:8px}
+.more-list button{all:unset;box-sizing:border-box;cursor:pointer;display:flex;justify-content:space-between;gap:12px;padding:8px 10px;border-radius:6px}
+.more-list button:hover{background:var(--surface)}
+.more-list button:focus-visible{outline:2px solid var(--accent)}
+.more-list span:last-child{font-family:var(--mono);color:var(--muted);white-space:nowrap}
+
+/* Race panel: slides in over the board. */
+.scrim{position:fixed;inset:0;background:var(--scrim);opacity:0;pointer-events:none;transition:opacity .2s}
+.scrim.open{opacity:1;pointer-events:auto}
+.panel{position:fixed;top:0;right:0;bottom:0;width:min(480px,100%);background:var(--surface);border-left:1px solid var(--line);
+  transform:translateX(100%);transition:transform .25s ease;overflow-y:auto;overscroll-behavior:contain;
+  padding:calc(16px + env(safe-area-inset-top,0px)) 20px calc(24px + env(safe-area-inset-bottom,0px));display:grid;gap:16px;align-content:start}
+.panel.open{transform:none}
+@media (prefers-reduced-motion:reduce){.panel,.scrim,.card{transition:none}}
+.close{all:unset;cursor:pointer;color:var(--accent);font-weight:600;font-size:.9rem;justify-self:start;padding:4px 0}
+.close:focus-visible{outline:2px solid var(--accent)}
 .kicker{font-size:.75rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:600}
-.detail h3{font-family:var(--display);font-weight:700;font-size:1.9rem;line-height:1.05;margin:2px 0 0;text-wrap:balance}
+.panel h3{font-family:var(--display);font-weight:700;font-size:2rem;line-height:1.05;margin:2px 0 0;text-wrap:balance}
 .verdict{margin:0;font-size:1.05rem}
 .verdict b{color:var(--lead)}
 .meta{display:flex;flex-wrap:wrap;gap:6px 18px;font-size:.85rem;color:var(--muted)}
@@ -69,7 +90,7 @@ h1 span{color:var(--accent)}
 .rows{display:grid;gap:12px}
 .row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 12px;align-items:baseline}
 .row .name{font-weight:500;min-width:0}
-.row .val{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:1rem}
+.row .val{font-family:var(--mono);font-variant-numeric:tabular-nums}
 .row.first .name,.row.first .val{color:var(--lead);font-weight:600}
 .bar{grid-column:1 / -1;height:10px;background:var(--track);border-radius:2px;overflow:hidden}
 .bar i{display:block;height:100%;background:var(--accent);border-radius:2px;transition:width .5s ease}
@@ -85,21 +106,28 @@ h1 span{color:var(--accent)}
 <body>
 <div class="wrap">
   <header>
-    <div class="top">
-      <h1>BC <span>Odds</span> Board</h1>
-      <div class="status"><span class="dot" id="dot"></span><span id="stamp">Loading…</span></div>
-    </div>
-    <p class="lede">Polymarket odds for BC races. Pick a race to see every candidate's chance.</p>
+    <h1>BC <span>Odds</span> Board</h1>
+    <div class="status"><span class="dot" id="dot"></span><span id="stamp">Loading…</span></div>
   </header>
-  <div class="main">
-    <aside class="side">
-      <label for="q" class="kicker">Find a race or candidate</label>
-      <input id="q" type="search" placeholder="Vancouver, Eby, Premier…" autocomplete="off">
-      <nav id="list" aria-label="Races"></nav>
-    </aside>
-    <section class="detail" id="detail" aria-live="polite"></section>
-  </div>
+
+  <section aria-labelledby="h-prov">
+    <h2 id="h-prov"><span>Provincial</span><small id="prov-date"></small></h2>
+    <div class="cards" id="prov"></div>
+  </section>
+
+  <section aria-labelledby="h-city">
+    <h2 id="h-city"><span>City mayors</span><small id="city-date"></small></h2>
+    <div class="cards" id="city"></div>
+  </section>
+
+  <details id="more-box">
+    <summary id="more-sum">More markets</summary>
+    <div class="more-list" id="more"></div>
+  </details>
 </div>
+
+<div class="scrim" id="scrim"></div>
+<aside class="panel" id="panel" role="dialog" aria-modal="true" aria-labelledby="p-title" aria-hidden="true"></aside>
 
 <script>
 // Data: Polymarket's public Gamma API (gamma-api.polymarket.com, no key).
@@ -142,94 +170,113 @@ const $ = s => document.querySelector(s);
 const bySoonest = (a, b) => GROUPS.indexOf(a.group) - GROUPS.indexOf(b.group) || b.vol - a.vol;
 MARKETS.sort(bySoonest);
 
-// Open on a race named in the link (#vancouver-mayoral-election-winner), else the last one viewed, else the biggest.
-let selected = MARKETS[0].slug;
-let showAll = false;
-try { const s = localStorage.getItem("bcodds.sel"); if (s && MARKETS.some(m => m.slug === s)) selected = s; } catch (e) {}
-const fromHash = location.hash.slice(1);
-if (MARKETS.some(m => m.slug === fromHash)) selected = fromHash;
+// Which slot a race fills on the front page. New markets found live fall into "city" or "more".
+const ROLE = { "british-columbia-general-election-winner": "party", "next-premier-of-british-columbia": "premier" };
+const roleOf = m => ROLE[m.slug] || (m.group === "Mayor races" ? "city" : "more");
+const cityName = m => m.title.replace(/\s*mayor.*$/i, "").trim() || m.title;
 
 const SMALL = .001;   // candidates under 0.1% hide behind "Show all"
 const pct = p => p < .01 ? "<1%" : (p * 100).toFixed(p < .1 ? 1 : 0) + "%";
 const money = v => "$" + (v >= 1000 ? (v / 1000).toFixed(v >= 100000 ? 0 : 1) + "K" : Math.round(v));
 const fmtDate = d => !d ? "unknown" : new Date(d + "T12:00:00").toLocaleDateString("en-CA", { month: "short", day: "numeric", year: "numeric" });
+const shortDate = d => fmtDate(d).replace(", " + new Date().getFullYear(), "");
 const sorted = m => [...m.out].sort((a, b) => b[1] - a[1]);
-const tossUp = m => { const [a, b] = sorted(m); return b && a[1] - b[1] < .1; };
+const tossUp = m => { const [a, b] = sorted(m); return !m.closed && b && a[1] - b[1] < .1; };
+const ready = () => MARKETS.filter(m => m.out.length);
 
 // Whole days from today (in BC) to the resolve date.
-function daysLeft(d) {
-  const today = new Date().toLocaleDateString("en-CA", { timeZone: TZ });   // YYYY-MM-DD
-  return Math.round((Date.parse(d) - Date.parse(today)) / 864e5);
-}
 function countdown(d) {
-  if (!d) return "no date";
-  const n = daysLeft(d);
+  if (!d) return "";
+  const today = new Date().toLocaleDateString("en-CA", { timeZone: TZ });   // YYYY-MM-DD
+  const n = Math.round((Date.parse(d) - Date.parse(today)) / 864e5);
   if (n > 1) return n + " days left";
   if (n === 1) return "tomorrow";
   if (n === 0) return "today";
-  return "closed, check Polymarket for the result";
+  return "closed";
+}
+const dateLine = d => d ? shortDate(d) + " · " + countdown(d) : "";
+
+// ---------- Front page ----------
+
+function card(m, question, large) {
+  const b = document.createElement("button");
+  b.type = "button"; b.className = "card" + (large ? " lg" : "");
+  b.innerHTML = '<span class="q"></span><span class="who"><b></b><span class="big"></span></span>' +
+    '<span class="duel"><i class="a"></i><i class="b"></i></span><span class="vs"></span>';
+  const [a, s] = sorted(m);
+  b.querySelector(".q").textContent = question;
+  b.querySelector(".who b").textContent = a[0];
+  b.querySelector(".big").textContent = pct(a[1]);
+  b.querySelector(".a").style.width = a[1] * 100 + "%";
+  b.querySelector(".b").style.width = (s ? s[1] * 100 : 0) + "%";
+  const vs = b.querySelector(".vs");
+  vs.textContent = m.closed ? "Won · resolved" : s ? "vs " + s[0] + " " + pct(s[1]) : "";
+  if (tossUp(m)) vs.insertAdjacentHTML("beforeend", '<span class="chip">Toss-up</span>');
+  b.setAttribute("aria-label", `${question}: ${a[0]} ${pct(a[1])}` + (s ? `, ${s[0]} ${pct(s[1])}` : ""));
+  b.onclick = () => openRace(m.slug, b);
+  return b;
 }
 
-function renderList() {
-  const q = $("#q").value.trim().toLowerCase();
-  const hits = MARKETS.filter(m => m.out.length).filter(m => !q || (m.title + " " + m.group + " " + m.out.map(o => o[0]).join(" ")).toLowerCase().includes(q));
-  const nav = $("#list"); nav.textContent = "";
-  if (!hits.length) { const p = document.createElement("p"); p.className = "empty"; p.textContent = "No race matches that. Try a city or a name."; nav.append(p); return; }
-  for (const g of GROUPS) {
-    const inGroup = hits.filter(x => x.group === g);
-    if (!inGroup.length) continue;
-    const box = document.createElement("div"); box.className = "group";
-    const h = document.createElement("h2");
-    h.innerHTML = "<span></span><small></small>";
-    h.querySelector("span").textContent = g;
-    const soon = inGroup.map(x => x.ends).filter(Boolean).sort()[0];
-    h.querySelector("small").textContent = soon ? fmtDate(soon).replace(", " + new Date().getFullYear(), "") + " · " + countdown(soon) : "";
-    box.append(h);
-    for (const m of inGroup) {
-      const [ln, lp] = sorted(m)[0];
-      const b = document.createElement("button"); b.className = "mkt"; b.type = "button";
-      b.setAttribute("aria-current", m.slug === selected ? "true" : "false");
-      b.innerHTML = '<span class="t"></span><span class="pct"></span><span class="lead"></span>';
-      b.querySelector(".t").textContent = m.title;
-      b.querySelector(".pct").textContent = pct(lp);
-      b.querySelector(".lead").textContent = ln + (m.closed ? " won" : " leads");
-      if (!m.closed && tossUp(m)) b.querySelector(".lead").insertAdjacentHTML("beforeend", '<span class="chip">Toss-up</span>');
-      b.onclick = () => {
-        selected = m.slug; showAll = false;
-        try { localStorage.setItem("bcodds.sel", selected); } catch (e) {}
-        renderList(); renderDetail();
-        if (innerWidth < 760) $("#detail").scrollIntoView({ behavior: "smooth", block: "start" });
-      };
-      box.append(b);
-    }
-    nav.append(box);
+function renderFront() {
+  const list = ready();
+  const party = list.find(m => roleOf(m) === "party");
+  const premier = list.find(m => roleOf(m) === "premier");
+  const cities = list.filter(m => roleOf(m) === "city");
+  const more = list.filter(m => roleOf(m) === "more");
+
+  const prov = $("#prov"); prov.textContent = "";
+  if (party) prov.append(card(party, "Which party wins", true));
+  if (premier) prov.append(card(premier, "Who becomes Premier", true));
+  $("#prov-date").textContent = dateLine((party || premier || {}).ends);
+  prov.closest("section").hidden = !party && !premier;
+
+  const city = $("#city"); city.textContent = "";
+  cities.forEach(m => city.append(card(m, cityName(m))));
+  $("#city-date").textContent = dateLine(cities.map(m => m.ends).filter(Boolean).sort()[0]);
+  city.closest("section").hidden = !cities.length;
+
+  const box = $("#more"); box.textContent = "";
+  for (const m of more) {
+    const b = document.createElement("button"); b.type = "button";
+    b.innerHTML = "<span></span><span></span>";
+    const [a] = sorted(m);
+    b.children[0].textContent = m.title;
+    b.children[1].textContent = a[0] + " " + pct(a[1]);
+    b.onclick = () => openRace(m.slug, b);
+    box.append(b);
   }
+  $("#more-sum").textContent = `More markets (${more.length})`;
+  $("#more-box").hidden = !more.length;
 }
 
-function renderDetail() {
-  const m = MARKETS.find(x => x.slug === selected);
-  const d = $("#detail");
+// ---------- Race panel ----------
+
+let openSlug = null, showAll = false, returnFocus = null;
+
+function renderPanel() {
+  const m = MARKETS.find(x => x.slug === openSlug);
+  if (!m || !m.out.length) return;
+  const p = $("#panel");
   const all = sorted(m);
-  const big = all.filter(o => o[1] >= SMALL);
-  const rows = showAll || all.length <= 6 ? all : big;
+  const rows = showAll || all.length <= 6 ? all : all.filter(o => o[1] >= SMALL);
   const hidden = all.length - rows.length;
   const max = Math.max(...rows.map(r => r[1]), .01);
   const [lead, second] = all;
+  const role = roleOf(m);
 
-  d.innerHTML = `
-    <button class="back" type="button">← All races</button>
-    <div><div class="kicker"></div><h3></h3></div>
+  p.innerHTML = `
+    <button class="close" type="button">← Back to board</button>
+    <div><div class="kicker"></div><h3 id="p-title"></h3></div>
     <p class="verdict"></p>
-    <div class="meta"><span>Resolves <b class="e"></b> (<span class="c"></span>)</span><span>Traded <b class="v"></b></span></div>
+    <div class="meta"><span>Resolves <b class="e"></b> <span class="c"></span></span><span>Traded <b class="v"></b></span></div>
     <div class="rows"></div>
-    <div class="foot"><span>Chance = price of a "Yes" share. Each candidate trades separately, so the column can add up to a little more or less than 100%.</span>
-    <a target="_blank" rel="noopener">Open this race on Polymarket ↗</a></div>`;
-  d.querySelector(".back").onclick = () => $("#q").scrollIntoView({ behavior: "smooth", block: "center" });
-  d.querySelector(".kicker").textContent = m.group;
-  d.querySelector("h3").textContent = m.title;
+    <div class="foot"><span>Chance = price of a "Yes" share on Polymarket. Each candidate trades separately, so the total can be a little over or under 100%.</span>
+    <a target="_blank" rel="noopener">Open on Polymarket ↗</a></div>`;
+  p.querySelector(".close").onclick = closeRace;
+  p.querySelector(".kicker").textContent = role === "city" ? "City mayor" : role === "more" ? m.group : "Provincial";
+  p.querySelector("h3").textContent = m.title;
 
-  // One-line answer first: who leads, by how much.
-  const v = d.querySelector(".verdict");
+  const v = p.querySelector(".verdict");
   if (m.closed) {
     v.innerHTML = "<b></b> won (resolved on Polymarket).";
     v.querySelector("b").textContent = lead[0];
@@ -237,16 +284,14 @@ function renderDetail() {
     v.innerHTML = "<b></b> leads at <b></b>";
     v.querySelectorAll("b")[0].textContent = lead[0];
     v.querySelectorAll("b")[1].textContent = pct(lead[1]);
-    if (second) v.append(tossUp(m) ? `, a toss-up with ${second[0]} (${pct(second[1])}).` : `, ahead of ${second[0]} (${pct(second[1])}).`);
-    else v.append(".");
+    v.append(second ? (tossUp(m) ? `, a toss-up with ${second[0]} (${pct(second[1])}).` : `, ahead of ${second[0]} (${pct(second[1])}).`) : ".");
   }
+  p.querySelector(".e").textContent = fmtDate(m.ends);
+  p.querySelector(".c").textContent = m.ends ? "(" + countdown(m.ends) + ")" : "";
+  p.querySelector(".v").textContent = money(m.vol);
+  p.querySelector(".foot a").href = "https://polymarket.com/event/" + m.slug;
 
-  d.querySelector(".e").textContent = fmtDate(m.ends);
-  d.querySelector(".c").textContent = countdown(m.ends);
-  d.querySelector(".v").textContent = money(m.vol);
-  d.querySelector(".foot a").href = "https://polymarket.com/event/" + m.slug;
-
-  const box = d.querySelector(".rows");
+  const box = p.querySelector(".rows");
   rows.forEach((o, i) => {
     const r = document.createElement("div"); r.className = "row" + (i === 0 ? " first" : "");
     r.innerHTML = '<span class="name"></span><span class="val"></span><span class="bar"><i style="width:0"></i></span>';
@@ -255,13 +300,49 @@ function renderDetail() {
     box.append(r);
     requestAnimationFrame(() => { r.querySelector("i").style.width = Math.max(o[1] / max * 100, .6) + "%"; });
   });
-  if (hidden > 0 || showAll && all.length > big.length && all.length > 6) {
+  if (hidden > 0 || showAll && all.length > 6 && all.some(o => o[1] < SMALL)) {
     const more = document.createElement("button"); more.className = "more"; more.type = "button";
     more.textContent = showAll ? "Hide long shots" : `Show ${hidden} more under 0.1%`;
-    more.onclick = () => { showAll = !showAll; renderDetail(); };
+    more.onclick = () => { showAll = !showAll; renderPanel(); };
     box.append(more);
   }
 }
+
+function openRace(slug, from, fromHistory) {
+  if (!MARKETS.some(m => m.slug === slug && m.out.length)) return;
+  openSlug = slug; showAll = false; returnFocus = from || null;
+  renderPanel();
+  $("#panel").classList.add("open"); $("#panel").setAttribute("aria-hidden", "false");
+  $("#scrim").classList.add("open"); document.body.classList.add("locked");
+  $("#panel").scrollTop = 0;
+  $("#panel .close").focus({ preventScroll: true });
+  // A history entry lets the phone's Back button close the panel.
+  if (!fromHistory) try { history.pushState({ race: slug }, "", "#" + slug); } catch (e) {}
+}
+
+function hidePanel() {
+  openSlug = null;
+  $("#panel").classList.remove("open"); $("#panel").setAttribute("aria-hidden", "true");
+  $("#scrim").classList.remove("open"); document.body.classList.remove("locked");
+  if (returnFocus) returnFocus.focus({ preventScroll: true });
+}
+
+function closeRace() {
+  let viaHistory = false;
+  try { if (history.state && history.state.race) { history.back(); viaHistory = true; } } catch (e) {}
+  if (!viaHistory) {
+    hidePanel();
+    try { history.replaceState(null, "", location.pathname + location.search); } catch (e) {}
+  }
+}
+
+addEventListener("popstate", () => {
+  const slug = location.hash.slice(1);
+  if (slug && MARKETS.some(m => m.slug === slug)) openRace(slug, null, true);
+  else if (openSlug) hidePanel();
+});
+$("#scrim").onclick = closeRace;
+addEventListener("keydown", e => { if (e.key === "Escape" && openSlug) closeRace(); });
 
 // ---------- Live mode ----------
 const API = "https://gamma-api.polymarket.com";
@@ -348,18 +429,20 @@ function setStamp(live) {
     ? "Live · updated " + new Date().toLocaleTimeString("en-CA", { hour: "numeric", minute: "2-digit", timeZone: TZ }) + " PT"
     : "Odds as of " + SNAP_TIME + " · not live";
 }
-function renderAll() { renderList(); renderDetail(); }
+function renderAll() { renderFront(); if (openSlug) renderPanel(); }
 
-$("#q").addEventListener("input", renderList);
 renderAll(); setStamp(false);
+// A link like ...#vancouver-mayoral-election-winner opens straight to that race.
+const startSlug = location.hash.slice(1);
+const openFromLink = () => { if (startSlug && !openSlug && MARKETS.some(m => m.slug === startSlug && m.out.length)) {
+  try { history.replaceState(null, "", location.pathname + location.search); } catch (e) {}
+  openRace(startSlug); } };
+openFromLink();
+
 (async function live() {
   if (!(await refreshLive())) return;
   setStamp(true); renderAll();
-  if (await discover()) {
-    await refreshLive();
-    if (MARKETS.some(m => m.slug === fromHash && m.out.length)) selected = fromHash;
-    renderAll();
-  }
+  if (await discover()) { await refreshLive(); renderAll(); openFromLink(); }
   let ticks = 0;
   setInterval(async () => {
     if (++ticks % 10 === 0) await discover();
