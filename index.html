@@ -1,0 +1,372 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Live Polymarket odds for BC mayor, provincial and party races.">
+<title>BC Odds Board</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+/* Layout: election-night board. Race list on the left (stacks on phone), selected race on the right with one bar per candidate. */
+:root{
+  --bg:#f3f5f4; --surface:#ffffff; --ink:#142320; --muted:#5d6b68; --line:#d9e0de;
+  --accent:#1d5c74; --accent-soft:#dbe9ef; --lead:#b4462b; --track:#e7ecea;
+  --live:#2e9b5f; --chip:#fbe7d6; --chip-ink:#8a3a1c;
+  --display:"Barlow Condensed","Arial Narrow",sans-serif;
+  --body:"IBM Plex Sans",system-ui,-apple-system,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0f1716; --surface:#16211f; --ink:#e6eeec; --muted:#93a39f; --line:#26332f;
+  --accent:#6fb3cc; --accent-soft:#1c3640; --lead:#e8805f; --track:#22302d;
+  --live:#5fcf8f; --chip:#3a2419; --chip-ink:#f1a684; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0f1716; --surface:#16211f; --ink:#e6eeec; --muted:#93a39f; --line:#26332f;
+  --accent:#6fb3cc; --accent-soft:#1c3640; --lead:#e8805f; --track:#22302d;
+  --live:#5fcf8f; --chip:#3a2419; --chip-ink:#f1a684; color-scheme:dark}
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.45;padding-inline:16px;padding-block:20px 40px}
+.wrap{max-width:1040px;margin:0 auto;display:grid;gap:20px}
+header{display:grid;gap:6px;border-bottom:2px solid var(--ink);padding-bottom:12px}
+.top{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:8px 16px}
+h1{font-family:var(--display);font-weight:700;font-size:2.4rem;line-height:1;letter-spacing:.01em;margin:0;text-transform:uppercase}
+h1 span{color:var(--accent)}
+.lede{margin:0;color:var(--muted);font-size:.9rem}
+.status{font-size:.8rem;color:var(--muted);display:flex;align-items:center;gap:8px;font-family:var(--mono)}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--muted);flex:none}
+.dot.live{background:var(--live)}
+.main{display:grid;grid-template-columns:minmax(0,320px) minmax(0,1fr);gap:20px;align-items:start}
+@media (max-width:760px){.main{grid-template-columns:minmax(0,1fr)}}
+
+.side{display:grid;gap:12px;min-width:0}
+#q{width:100%;font:inherit;padding:10px 12px;border:1px solid var(--line);border-radius:6px;background:var(--surface);color:var(--ink)}
+#q:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.group{display:grid;gap:2px}
+.group h2{display:flex;flex-wrap:wrap;justify-content:space-between;gap:2px 8px;font-family:var(--display);font-weight:600;font-size:.95rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:10px 0 4px}
+.group h2 small{font-family:var(--mono);font-size:.72rem;letter-spacing:0;text-transform:none;font-weight:500}
+.mkt{all:unset;box-sizing:border-box;cursor:pointer;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 10px;padding:9px 10px;border-radius:6px;border-left:3px solid transparent}
+.mkt:hover{background:var(--surface)}
+.mkt:focus-visible{outline:2px solid var(--accent)}
+.mkt[aria-current="true"]{background:var(--accent-soft);border-left-color:var(--accent)}
+.mkt .t{font-weight:500;min-width:0;grid-column:1;grid-row:1}
+.mkt .lead{font-size:.8rem;color:var(--muted);grid-column:1;grid-row:2;min-width:0}
+.mkt .pct{font-family:var(--mono);font-size:.85rem;font-variant-numeric:tabular-nums;color:var(--ink);grid-column:2;grid-row:1 / span 2;align-self:center}
+.chip{display:inline-block;font-size:.68rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;padding:1px 6px;border-radius:3px;background:var(--chip);color:var(--chip-ink);margin-left:6px;vertical-align:1px}
+.empty{color:var(--muted);font-size:.9rem;padding:8px 10px}
+
+.detail{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:20px;min-width:0;display:grid;gap:16px;scroll-margin-top:12px}
+.back{all:unset;cursor:pointer;color:var(--accent);font-size:.85rem;font-weight:600;display:none}
+.back:focus-visible{outline:2px solid var(--accent)}
+@media (max-width:760px){.back{display:inline}}
+.kicker{font-size:.75rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.detail h3{font-family:var(--display);font-weight:700;font-size:1.9rem;line-height:1.05;margin:2px 0 0;text-wrap:balance}
+.verdict{margin:0;font-size:1.05rem}
+.verdict b{color:var(--lead)}
+.meta{display:flex;flex-wrap:wrap;gap:6px 18px;font-size:.85rem;color:var(--muted)}
+.meta b{color:var(--ink);font-weight:600;font-family:var(--mono);font-variant-numeric:tabular-nums}
+.rows{display:grid;gap:12px}
+.row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 12px;align-items:baseline}
+.row .name{font-weight:500;min-width:0}
+.row .val{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:1rem}
+.row.first .name,.row.first .val{color:var(--lead);font-weight:600}
+.bar{grid-column:1 / -1;height:10px;background:var(--track);border-radius:2px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--accent);border-radius:2px;transition:width .5s ease}
+.row.first .bar i{background:var(--lead)}
+@media (prefers-reduced-motion:reduce){.bar i{transition:none}}
+.more{all:unset;cursor:pointer;color:var(--accent);font-size:.85rem;font-weight:600;justify-self:start}
+.more:focus-visible{outline:2px solid var(--accent)}
+.foot{font-size:.8rem;color:var(--muted);border-top:1px solid var(--line);padding-top:12px;display:grid;gap:4px}
+.foot a{color:var(--accent)}
+</style>
+
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="top">
+      <h1>BC <span>Odds</span> Board</h1>
+      <div class="status"><span class="dot" id="dot"></span><span id="stamp">Loading…</span></div>
+    </div>
+    <p class="lede">Polymarket odds for BC races. Pick a race to see every candidate's chance.</p>
+  </header>
+  <div class="main">
+    <aside class="side">
+      <label for="q" class="kicker">Find a race or candidate</label>
+      <input id="q" type="search" placeholder="Vancouver, Eby, Premier…" autocomplete="off">
+      <nav id="list" aria-label="Races"></nav>
+    </aside>
+    <section class="detail" id="detail" aria-live="polite"></section>
+  </div>
+</div>
+
+<script>
+// Data: Polymarket's public Gamma API (gamma-api.polymarket.com, no key).
+// The snapshot below (2026-10-09 ~1:25 PM PT) shows instantly and stays if the API is unreachable.
+// On a normal site the page then goes live: it finds every open BC market by search,
+// refreshes prices every minute, and searches again for new markets every 10 minutes.
+// CORS: Gamma sends Access-Control-Allow-Origin: *, so GitHub Pages can call it directly.
+// If a browser ever blocks it, put a small pass-through proxy (e.g. a Cloudflare Worker) in API below.
+const SNAP_TIME = "Oct 9, 1:25 PM PT";
+const TZ = "America/Vancouver";
+const GROUPS = ["Mayor races", "Provincial", "Party", "Other BC"];   // display order: soonest first
+const MARKETS = [
+ {slug:"next-premier-of-british-columbia",group:"Provincial",title:"Next Premier of British Columbia",ends:"2026-10-24",vol:121231,
+  out:[["Lorne Doerkson",.665],["David Eby",.32],["John Rustad",.0005],["Peter Milobar",.0005],["Emily Lowan",.0005],["Dallas Brodie",.0005]]},
+ {slug:"british-columbia-general-election-winner",group:"Provincial",title:"BC General Election Winner",ends:"2026-10-24",vol:18967,
+  out:[["Conservative",.515],["NDP",.45],["Greens",.0005],["CentreBC",.0005],["OneBC",.0005]]},
+ {slug:"british-columbia-general-election-2nd-place",group:"Provincial",title:"BC Election: 2nd Place",ends:"2026-10-24",vol:5095,
+  out:[["NDP",.48],["Conservative",.43],["OneBC",.0055],["CentreBC",.0025],["Greens",.002]]},
+ {slug:"british-columbia-general-election-3rd-place",group:"Provincial",title:"BC Election: 3rd Place",ends:"2026-10-24",vol:3244,
+  out:[["Greens",.91],["OneBC",.0515],["CentreBC",.0415],["NDP",.037],["Conservative",.014]]},
+ {slug:"vancouver-mayoral-election-winner",group:"Mayor races",title:"Vancouver Mayor",ends:"2026-10-17",vol:261220,
+  out:[["Pete Fry",.483],["Ken Sim",.415],["Kareem Allam",.0115],["William Azaroff",.0005],["Tim Louis",.0005],["John Coupar",.0005],["Colleen Hardwick",.0005],["Rebecca Bligh",.0005],["Kirk LaPointe",.0005],["Fred Harding",.0005],["Sean Orr",.0005],["Amanda Burrows",.0005],["Stephanie Allen",.0005]]},
+ {slug:"richmond-mayoral-election-2026",group:"Mayor races",title:"Richmond Mayor",ends:"2026-10-17",vol:26628,
+  out:[["Rob Howard",.5725],["Alexa Loo",.205],["Kash Heed",.19],["Dickens Cheung",.0125],["Henry Yao",.005],["Mei Kang",.0025],["Sheldon Starrett",.0025]]},
+ {slug:"surrey-mayoral-election-20260807185613301",group:"Mayor races",title:"Surrey Mayor",ends:"2026-10-17",vol:33787,
+  out:[["Brenda Locke",.59],["Linda Annis",.1725],["Honveer Singh Randhawa",.073],["Doug McCallum",.0335],["Mike Starchuk",.007],["Troy Van Vliet",.0005]]},
+ {slug:"burnaby-mayoral-election-2026",group:"Mayor races",title:"Burnaby Mayor",ends:"2026-10-17",vol:2865,
+  out:[["Mike Hurley",.925],["Michael Angelo",.0445],["Heymann Yip",.0045]]},
+ {slug:"coquitlam-mayoral-election-winner-2026",group:"Mayor races",title:"Coquitlam Mayor",ends:"2026-10-17",vol:9301,
+  out:[["Craig Hodge",.9635],["Trish Mandewo",.025],["Madhavee Inamdar",.0105]]},
+ {slug:"west-vancouver-mayoral-election-winner",group:"Mayor races",title:"West Vancouver Mayor",ends:"2026-10-17",vol:6604,
+  out:[["Kirk LaPointe",.48],["Mark Sager",.465]]},
+ {slug:"new-westminster-mayoral-election-winner",group:"Mayor races",title:"New Westminster Mayor",ends:"2026-10-17",vol:7406,
+  out:[["Patrick Johnstone",.615],["Daniel Fontaine",.315]]},
+ {slug:"bc-conservative-party-leadership-election-winner-next",group:"Party",title:"Next BC Conservative Leader",ends:"2027-12-31",vol:5342,
+  out:[["Yuri Fulmer",.27],["Caroline Elliott",.26],["Aaron Gunn",.18],["Stockwell Day",.135],["Sheldon Clare",.1345],["Iain Black",.108],["Chip Wilson",.096],["Claire Rattée",.06]]}
+];
+
+const $ = s => document.querySelector(s);
+const bySoonest = (a, b) => GROUPS.indexOf(a.group) - GROUPS.indexOf(b.group) || b.vol - a.vol;
+MARKETS.sort(bySoonest);
+
+// Open on a race named in the link (#vancouver-mayoral-election-winner), else the last one viewed, else the biggest.
+let selected = MARKETS[0].slug;
+let showAll = false;
+try { const s = localStorage.getItem("bcodds.sel"); if (s && MARKETS.some(m => m.slug === s)) selected = s; } catch (e) {}
+const fromHash = location.hash.slice(1);
+if (MARKETS.some(m => m.slug === fromHash)) selected = fromHash;
+
+const SMALL = .001;   // candidates under 0.1% hide behind "Show all"
+const pct = p => p < .01 ? "<1%" : (p * 100).toFixed(p < .1 ? 1 : 0) + "%";
+const money = v => "$" + (v >= 1000 ? (v / 1000).toFixed(v >= 100000 ? 0 : 1) + "K" : Math.round(v));
+const fmtDate = d => !d ? "unknown" : new Date(d + "T12:00:00").toLocaleDateString("en-CA", { month: "short", day: "numeric", year: "numeric" });
+const sorted = m => [...m.out].sort((a, b) => b[1] - a[1]);
+const tossUp = m => { const [a, b] = sorted(m); return b && a[1] - b[1] < .1; };
+
+// Whole days from today (in BC) to the resolve date.
+function daysLeft(d) {
+  const today = new Date().toLocaleDateString("en-CA", { timeZone: TZ });   // YYYY-MM-DD
+  return Math.round((Date.parse(d) - Date.parse(today)) / 864e5);
+}
+function countdown(d) {
+  if (!d) return "no date";
+  const n = daysLeft(d);
+  if (n > 1) return n + " days left";
+  if (n === 1) return "tomorrow";
+  if (n === 0) return "today";
+  return "closed, check Polymarket for the result";
+}
+
+function renderList() {
+  const q = $("#q").value.trim().toLowerCase();
+  const hits = MARKETS.filter(m => m.out.length).filter(m => !q || (m.title + " " + m.group + " " + m.out.map(o => o[0]).join(" ")).toLowerCase().includes(q));
+  const nav = $("#list"); nav.textContent = "";
+  if (!hits.length) { const p = document.createElement("p"); p.className = "empty"; p.textContent = "No race matches that. Try a city or a name."; nav.append(p); return; }
+  for (const g of GROUPS) {
+    const inGroup = hits.filter(x => x.group === g);
+    if (!inGroup.length) continue;
+    const box = document.createElement("div"); box.className = "group";
+    const h = document.createElement("h2");
+    h.innerHTML = "<span></span><small></small>";
+    h.querySelector("span").textContent = g;
+    const soon = inGroup.map(x => x.ends).filter(Boolean).sort()[0];
+    h.querySelector("small").textContent = soon ? fmtDate(soon).replace(", " + new Date().getFullYear(), "") + " · " + countdown(soon) : "";
+    box.append(h);
+    for (const m of inGroup) {
+      const [ln, lp] = sorted(m)[0];
+      const b = document.createElement("button"); b.className = "mkt"; b.type = "button";
+      b.setAttribute("aria-current", m.slug === selected ? "true" : "false");
+      b.innerHTML = '<span class="t"></span><span class="pct"></span><span class="lead"></span>';
+      b.querySelector(".t").textContent = m.title;
+      b.querySelector(".pct").textContent = pct(lp);
+      b.querySelector(".lead").textContent = ln + (m.closed ? " won" : " leads");
+      if (!m.closed && tossUp(m)) b.querySelector(".lead").insertAdjacentHTML("beforeend", '<span class="chip">Toss-up</span>');
+      b.onclick = () => {
+        selected = m.slug; showAll = false;
+        try { localStorage.setItem("bcodds.sel", selected); } catch (e) {}
+        renderList(); renderDetail();
+        if (innerWidth < 760) $("#detail").scrollIntoView({ behavior: "smooth", block: "start" });
+      };
+      box.append(b);
+    }
+    nav.append(box);
+  }
+}
+
+function renderDetail() {
+  const m = MARKETS.find(x => x.slug === selected);
+  const d = $("#detail");
+  const all = sorted(m);
+  const big = all.filter(o => o[1] >= SMALL);
+  const rows = showAll || all.length <= 6 ? all : big;
+  const hidden = all.length - rows.length;
+  const max = Math.max(...rows.map(r => r[1]), .01);
+  const [lead, second] = all;
+
+  d.innerHTML = `
+    <button class="back" type="button">← All races</button>
+    <div><div class="kicker"></div><h3></h3></div>
+    <p class="verdict"></p>
+    <div class="meta"><span>Resolves <b class="e"></b> (<span class="c"></span>)</span><span>Traded <b class="v"></b></span></div>
+    <div class="rows"></div>
+    <div class="foot"><span>Chance = price of a "Yes" share. Each candidate trades separately, so the column can add up to a little more or less than 100%.</span>
+    <a target="_blank" rel="noopener">Open this race on Polymarket ↗</a></div>`;
+  d.querySelector(".back").onclick = () => $("#q").scrollIntoView({ behavior: "smooth", block: "center" });
+  d.querySelector(".kicker").textContent = m.group;
+  d.querySelector("h3").textContent = m.title;
+
+  // One-line answer first: who leads, by how much.
+  const v = d.querySelector(".verdict");
+  if (m.closed) {
+    v.innerHTML = "<b></b> won (resolved on Polymarket).";
+    v.querySelector("b").textContent = lead[0];
+  } else {
+    v.innerHTML = "<b></b> leads at <b></b>";
+    v.querySelectorAll("b")[0].textContent = lead[0];
+    v.querySelectorAll("b")[1].textContent = pct(lead[1]);
+    if (second) v.append(tossUp(m) ? `, a toss-up with ${second[0]} (${pct(second[1])}).` : `, ahead of ${second[0]} (${pct(second[1])}).`);
+    else v.append(".");
+  }
+
+  d.querySelector(".e").textContent = fmtDate(m.ends);
+  d.querySelector(".c").textContent = countdown(m.ends);
+  d.querySelector(".v").textContent = money(m.vol);
+  d.querySelector(".foot a").href = "https://polymarket.com/event/" + m.slug;
+
+  const box = d.querySelector(".rows");
+  rows.forEach((o, i) => {
+    const r = document.createElement("div"); r.className = "row" + (i === 0 ? " first" : "");
+    r.innerHTML = '<span class="name"></span><span class="val"></span><span class="bar"><i style="width:0"></i></span>';
+    r.querySelector(".name").textContent = o[0];
+    r.querySelector(".val").textContent = pct(o[1]);
+    box.append(r);
+    requestAnimationFrame(() => { r.querySelector("i").style.width = Math.max(o[1] / max * 100, .6) + "%"; });
+  });
+  if (hidden > 0 || showAll && all.length > big.length && all.length > 6) {
+    const more = document.createElement("button"); more.className = "more"; more.type = "button";
+    more.textContent = showAll ? "Hide long shots" : `Show ${hidden} more under 0.1%`;
+    more.onclick = () => { showAll = !showAll; renderDetail(); };
+    box.append(more);
+  }
+}
+
+// ---------- Live mode ----------
+const API = "https://gamma-api.polymarket.com";
+const SEARCH_TERMS = ["British Columbia", "BC", "Vancouver", "Richmond", "Surrey", "Burnaby", "Coquitlam",
+  "New Westminster", "Kelowna", "Abbotsford", "Nanaimo", "Victoria mayor"];
+// A found event counts if its title or slug matches INCLUDE and not EXCLUDE (same names, other teams and cities).
+const INCLUDE = /british[\s-]columbia|\bbc\b|vancouver|richmond|surrey|burnaby|coquitlam|new[\s-]westminster|kelowna|abbotsford|nanaimo|victoria.*mayor/i;
+const EXCLUDE = /canucks|whitecaps|\bnhl\b|\bmls\b|spiders|virginia|\bva\b|washington/i;
+
+async function getJSON(path) {
+  const r = await fetch(API + path);
+  if (!r.ok) throw Object.assign(new Error("HTTP " + r.status), { status: r.status });
+  return r.json();
+}
+const fetchEvent = slug => getJSON("/events/slug/" + encodeURIComponent(slug));
+
+// outcomes / outcomePrices usually arrive as JSON-encoded strings: '["Yes","No"]'.
+function parseList(v) {
+  if (Array.isArray(v)) return v;
+  try { const x = JSON.parse(v); return Array.isArray(x) ? x : []; } catch (e) { return []; }
+}
+
+function groupOf(title) {
+  if (/mayor/i.test(title)) return "Mayor races";
+  if (/premier|general election|provincial|riding|\bmla\b|ndp/i.test(title)) return "Provincial";
+  if (/leader|party/i.test(title)) return "Party";
+  return "Other BC";
+}
+
+// Grouped event: one Yes/No market per candidate, "Yes" price = chance. Single market: its own outcomes.
+function applyEvent(m, ev) {
+  if (!ev) return false;
+  const all = Array.isArray(ev.markets) ? ev.markets : [];
+  let ms = ev.closed ? all : all.filter(mk => !mk.closed);
+  const traded = ms.filter(mk => +mk.volume > 0);
+  if (traded.length) ms = traded;
+  let out;
+  if (ms.length === 1 && !ms[0].groupItemTitle) {
+    const prices = parseList(ms[0].outcomePrices);
+    out = parseList(ms[0].outcomes).map((n, i) => [String(n), +prices[i]]);
+  } else {
+    out = ms.map(mk => [mk.groupItemTitle || mk.question || "Unnamed", +parseList(mk.outcomePrices)[0]]);
+  }
+  out = out.filter(o => !isNaN(o[1]));
+  if (!out.length) return false;
+  m.out = out;
+  m.vol = +ev.volume || m.vol;
+  m.closed = !!ev.closed;
+  if (ev.endDate) m.ends = String(ev.endDate).slice(0, 10);
+  return true;
+}
+
+// Prices for every known race. The first request doubles as the "can we reach the API?" test:
+// an HTTP error (e.g. 404 for a removed race) still means the API answered.
+async function refreshLive() {
+  try { applyEvent(MARKETS[0], await fetchEvent(MARKETS[0].slug)); }
+  catch (e) { if (!e.status) return false; }   // blocked or offline: keep the snapshot
+  await Promise.all(MARKETS.slice(1).map(m => fetchEvent(m.slug).then(ev => applyEvent(m, ev)).catch(() => {})));
+  MARKETS.sort(bySoonest);
+  return true;
+}
+
+// Find open BC events the list doesn't have yet. Returns how many were added.
+async function discover() {
+  const results = await Promise.allSettled(SEARCH_TERMS.map(q => getJSON(
+    "/public-search?q=" + encodeURIComponent(q) + "&events_status=active&limit_per_type=50&search_tags=false&search_profiles=false")));
+  let added = 0;
+  for (const r of results) {
+    if (r.status !== "fulfilled") continue;
+    for (const ev of (r.value && r.value.events) || []) {
+      const text = (ev && ev.title || "") + " " + (ev && ev.slug || "");
+      if (!ev || !ev.slug || ev.closed === true || !INCLUDE.test(text) || EXCLUDE.test(text)) continue;
+      if (MARKETS.some(m => m.slug === ev.slug)) continue;
+      MARKETS.push({ slug: ev.slug, title: ev.title || ev.slug, group: groupOf(ev.title || ""), ends: "", vol: 0, out: [] });
+      added++;
+    }
+  }
+  return added;
+}
+
+function setStamp(live) {
+  $("#dot").classList.toggle("live", live);
+  $("#stamp").textContent = live
+    ? "Live · updated " + new Date().toLocaleTimeString("en-CA", { hour: "numeric", minute: "2-digit", timeZone: TZ }) + " PT"
+    : "Odds as of " + SNAP_TIME + " · not live";
+}
+function renderAll() { renderList(); renderDetail(); }
+
+$("#q").addEventListener("input", renderList);
+renderAll(); setStamp(false);
+(async function live() {
+  if (!(await refreshLive())) return;
+  setStamp(true); renderAll();
+  if (await discover()) {
+    await refreshLive();
+    if (MARKETS.some(m => m.slug === fromHash && m.out.length)) selected = fromHash;
+    renderAll();
+  }
+  let ticks = 0;
+  setInterval(async () => {
+    if (++ticks % 10 === 0) await discover();
+    if (await refreshLive()) { setStamp(true); renderAll(); }
+  }, 60000);
+})();
+</script>
+
+</body>
+</html>
